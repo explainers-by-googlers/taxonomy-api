@@ -1,185 +1,130 @@
-# Explainer for the TODO API
+# Explainer for the Taxonomy API
 
-**Instructions for the explainer author: Search for "todo" in this repository and update all the
-instances as appropriate. For the instances in `index.bs`, update the repository name, but you can
-leave the rest until you start the specification. Then delete the TODOs and this block of text.**
+**Instructions for the explainer author: Search for "todo" in this repository and update all the instances as appropriate. For the instances in `index.bs`, update the repository name, but you can leave the rest until you start the specification. Then delete the TODOs and this block of text.**
 
-This proposal is an early design sketch by [TODO: team] to describe the problem below and solicit
-feedback on the proposed solution. It has not been approved to ship in Chrome.
-
-TODO: Fill in the whole explainer template below using https://tag.w3.org/explainers/ as a
-reference. Look for [brackets].
+This proposal is an early design sketch by the Chrome Built-in AI Team to describe the problem below and solicit feedback on the proposed solution. It has not been approved to ship in Chrome.
 
 ## Proponents
 
-- [Proponent team 1]
-- [Proponent team 2]
-- [etc.]
+- Google Chrome Team
 
 ## Participate
-- https://github.com/explainers-by-googlers/[your-repository-name]/issues
-- [Discussion forum]
 
-## Table of Contents [if the explainer is longer than one printed page]
+- [Discussion forum](https://github.com/explainers-by-googlers/taxonomy-api/issues)
 
-<!-- Update this table of contents by running `npx doctoc README.md` -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-- [Introduction](#introduction)
-- [Goals](#goals)
-- [Non-goals](#non-goals)
-- [User research](#user-research)
-- [Use cases](#use-cases)
-  - [Use case 1](#use-case-1)
-  - [Use case 2](#use-case-2)
-- [[Potential Solution]](#potential-solution)
-  - [How this solution would solve the use cases](#how-this-solution-would-solve-the-use-cases)
-    - [Use case 1](#use-case-1-1)
-    - [Use case 2](#use-case-2-1)
-- [Detailed design discussion](#detailed-design-discussion)
-  - [[Tricky design choice #1]](#tricky-design-choice-1)
-  - [[Tricky design choice 2]](#tricky-design-choice-2)
-- [Considered alternatives](#considered-alternatives)
-  - [[Alternative 1]](#alternative-1)
-  - [[Alternative 2]](#alternative-2)
-- [Security and Privacy Considerations](#security-and-privacy-considerations)
-- [Stakeholder Feedback / Opposition](#stakeholder-feedback--opposition)
-- [References & acknowledgements](#references--acknowledgements)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Introduction
 
-[The "executive summary" or "abstract".
-Explain in a few sentences what the goals of the project are,
-and a brief overview of how the solution works.
-This should be no more than 1-2 paragraphs.]
+The **Taxonomy API** is a specialized, high-performance JavaScript API designed to classify input text strictly into a predefined taxonomy (specifically **IAB Content Taxonomy V3.1**).
+
+Unlike the generic [Prompt API](https://github.com/webmachinelearning/prompt-api), which exposes general-purpose Large Language Models (LLMs), this API is backed by a dedicated "tiny model" optimized solely for classification. This architecture allows for drastic reductions in inference latency and resource consumption, making it feasible for real-time synchronous operations like ad auctions, where milliseconds determine viability.
 
 ## Goals
 
-[What is the **end-user need** which this project aims to address? Make this section short, and
-elaborate in the Use cases section.]
+The primary goal is to provide a privacy-preserving, on-device mechanism for Ad Tech partners (e.g., Google Ads, Prebid.js) to classify page content.
+
+*   **Low Latency:** Provide classification results fast enough to participate in real-time bidding flows.
+*   **Privacy:** Keep page content processing entirely local to the device; no text is sent to a server for classification.
+*   **Standardization:** Adherence to the IAB Content Taxonomy V3.1 standard.
+*   **Efficiency:** Minimize CPU and memory impact using a specialized model.
 
 ## Non-goals
 
-[If there are "adjacent" goals which may appear to be in scope but aren't,
-enumerate them here. This section may be fleshed out as your design progresses and you encounter necessary technical and other trade-offs.]
-
-## User research
-
-[If any user research has been conducted to inform your design choices,
-discuss the process and findings. User research should be more common than it is.]
+*   **Custom Taxonomies:** Support for user-defined categories or custom models is **out of scope** for the initial experiment. We may revisit this based on ecosystem demand.
+*   **Generic NLP:** This API is not intended for summarization, translation, or sentiment analysis.
+*   **Human-Readable Strings:** The API returns stable IAB Unique IDs. Mapping these to human-readable names (and localization) is the responsibility of the developer.
 
 ## Use cases
 
-[Describe in detail what problems end-users are facing, which this project is trying to solve. A
-common mistake in this section is to take a web developer's or server operator's perspective, which
-makes reviewers worry that the proposal will violate [RFC 8890, The Internet is for End
-Users](https://www.rfc-editor.org/rfc/rfc8890).]
+### Use case 1: Real-time Contextual Advertising
 
-### Use case 1
+Ad scripts executing on a publisher's page need to determine the topic of the current content immediately to bid on relevant ads. Currently, this often requires sending page text to a third-party server (high latency, privacy risk) or loading heavy JS libraries. This API allows the script to classify the content locally and inject the category IDs into the ad request before the auction closes.
 
-### Use case 2
+### Use case 2: Brand Safety Verification
 
-<!-- In your initial explainer, you shouldn't be attached or appear attached to any of the potential
-solutions you describe below this. -->
+Publishers and advertisers need to verify that content does not fall into sensitive categories (e.g., "Hate Speech" or "Adult Content") before rendering ads. The Taxonomy API allows a script to quickly "gut check" the content against the IAB standard taxonomy to prevent brand suitability violations without leaking the page content to external verifiers.
 
-## [Potential Solution]
+## Potential Solution
 
-[For each related element of the proposed solution - be it an additional JS method, a new object, a new element, a new concept etc., create a section which briefly describes it.]
+We propose a new interface, `Taxonomizer`, which exposes the classification capabilities.
 
 ```js
-// Provide example code - not IDL - demonstrating the design of the feature.
+// 1. Check availability
+// Returns: "available", "downloadable", "downloading" or "unavailable"
+const status = await Taxonomizer.availability();
 
-// If this API can be used on its own to address a user need,
-// link it back to one of the scenarios in the goals section.
+if (status == "available" || status == “downloadable”) {
+  // 2. Create the categorizer. If status is "downloadable", triggers the model download.
+  // 'iab-taxonomy-v3.1' is the implicit default for the experiment.
+  const taxo = await Taxonomizer.create();
 
-// If you need to show how to get the feature set up
-// (initialized, or using permissions, etc.), include that too.
+  // 3. Classify content
+  const textContent = document.body.innerText; 
+  
+  // Returns a flat list of categories that met a confidence threshold.
+  const categories = await taxo.categorize(textContent);
+
+  // Output: Simple flat array of IDs and scores, sorted by confidence.
+  console.log(categories);
+  
+  /* Example Output (using IAB V3.1 Unique IDs): 
+   [
+    { id: "602", confidence: 0.98 }, // Represents "Consumer Electronics"
+    { id: "597", confidence: 0.95 }, // Represents "Technology & Computing"
+    { id: "45",  confidence: 0.82 }  // Represents "Automotive" 
+  ]
+  */
+}
 ```
 
-[Where necessary, provide links to longer explanations of the relevant pre-existing concepts and API.
-If there is no suitable external documentation, you might like to provide supplementary information as an appendix in this document, and provide an internal link where appropriate.]
 
-[If this is already specced, link to the relevant section of the spec.]
-
-[If spec work is in progress, link to the PR or draft of the spec.]
-
-[If you have more potential solutions in mind, add ## Potential Solution 2, 3, etc. sections.]
-
-### How this solution would solve the use cases
-
-[If there are a suite of interacting APIs, show how they work together to solve the use cases described.]
-
-#### Use case 1
-
-[Description of the end-user scenario]
-
-```js
-// Sample code demonstrating how to use these APIs to address that scenario.
-```
-
-#### Use case 2
-
-[etc.]
 
 ## Detailed design discussion
 
-### [Tricky design choice #1]
+### Specialized Model vs. Generic Prompt API
 
-[Talk through the tradeoffs in coming to the specific design point you want to make.]
+A generic LLM (like Gemini Nano via the Prompt API) can classify text, but it is "overkill" for this task. It requires significant memory, drains more battery, and has higher latency.
+By using a smaller model trained specifically on the IAB dataset, we can achieve high accuracy with a fraction of the resources, enabling the API to be used more aggressively on mobile devices and in performance-critical paths.
 
-```js
-// Illustrated with example code.
-```
+### IAB V3.1 and ID-based Outputs
 
-[This may be an open question,
-in which case you should link to any active discussion threads.]
+To ensure stability and reduce API bloat, the API returns the **Unique ID** (string) defined in the IAB V3.1 spec, rather than the category name.
+*   **Stability:** Names might change or be localized; IDs remain constant.
+*   **Size:** Reduces the memory footprint of the result object.
+*   **Flexibility:** Developers can map IDs to their own internal naming conventions or preferred languages.
 
-### [Tricky design choice 2]
+### Ergonomics and Resource Management
 
-[etc.]
+To keep the initial implementation lightweight and focused on the core value proposition, we will NOT support the following ergonomic features UNLESS they are trivial to implement in chrome:
+
+1.  **Cancellation (`AbortSignal`):** Allowed in `categorize()` to stop processing long text if the user navigates away or the ad auction times out.
+2.  **Resource Cleanup (`destroy()`):** A method to explicitly free up the model memory. However, the API is designed to allow parallel repeated usage (a created `taxonomizer` instance can be used on different inputs multiple times).
+3.  **Download Progress:** Standard events to monitor the download of the model weights if `availability` is `after-download`.
+4.  **Quota Management:** We will not expose a complex token counting API (`measureInputQuota`). Instead, if the input text exceeds the model's context window, the `categorize()` method will simply throw a standard Error.
+5.  **Streaming:** Given that classification is an atomic operation (the result is a set of categories, not a generated sentence), we do not plan to support streaming outputs.
+6.  **Multi-lingual:** The model will only support English.
 
 ## Considered alternatives
 
-[This should include as many alternatives as you can,
-from high level architectural decisions down to alternative naming choices.]
+### Server-side Classification
 
-### [Alternative 1]
+*   **Approach:** Send `document.body.innerText` to an ad-tech server.
+*   **Pros:** Access to massive models; easy to update.
+*   **Cons:** Extremely high privacy risk (sending user browsing data); high latency; bandwidth costs.
 
-[Describe an alternative which was considered,
-and why you decided against it.]
+### Client-side WASM/JS Libraries
 
-### [Alternative 2]
-
-[etc.]
+*   **Approach:** Bundle a TensorFlow.js or ONNX model in the website's JavaScript.
+*   **Pros:** Works in all browsers today.
+*   **Cons:** Increases initial page load size (megabytes of weights); parsing JS/WASM is slower than native execution; difficult to cache models across different websites (each site re-downloads the library).
 
 ## Security and Privacy Considerations
 
-[Describe any interesting answers you give to the [Security and Privacy Self-Review
-Questionnaire](https://www.w3.org/TR/security-privacy-questionnaire/) and any interesting ways that
-your feature interacts with [Chromium's Web Platform Security
-Guidelines](https://chromium.googlesource.com/chromium/src/+/master/docs/security/web-platform-security-guidelines.md).]
+*   **Local Execution:** No user text leaves the device.
+*   **Fingerprinting:** As with any API backed by hardware acceleration or specific model versions, there is a risk of fingerprinting based on inference speed or minute differences in numerical precision. We will mitigate this by standardizing the model weights and precision across the specific browser version.
+*   **Updates:** Model updates are managed by the browser component updater, ensuring security patches and taxonomy version consistency are applied automatically.
 
 ## Stakeholder Feedback / Opposition
 
-[Implementors and other stakeholders may already have publicly stated positions on this work. If you can, list them here with links to evidence as appropriate.]
-
-- [Implementor A] : Positive
-- [Stakeholder B] : No signals
-- [Implementor C] : Negative
-
-[If appropriate, explain the reasons given by other implementors for their concerns.]
-
-## References & acknowledgements
-
-[Your design will change and be informed by many people; acknowledge them in an ongoing way! It helps build community and, as we only get by through the contributions of many, is only fair.]
-
-[Unless you have a specific reason not to, these should be in alphabetical order.]
-
-Many thanks for valuable feedback and advice from:
-
-- [Person 1]
-- [Person 2]
-- [etc.]
+- **Ad Tech Partners (Google Ads, Prebid):** Expressed strong interest in a local solution to reduce latency and server costs.
+- **Publishers:** Interested in better ad targeting but concerned about the performance impact of running inference on the main thread (we generally recommend using `await` in a non-blocking manner or running in a Worker).
