@@ -2,7 +2,7 @@
 
 **Instructions for the explainer author: Search for "todo" in this repository and update all the instances as appropriate. For the instances in `index.bs`, update the repository name, but you can leave the rest until you start the specification. Then delete the TODOs and this block of text.**
 
-This proposal is an early design sketch by the Chrome Built-in AI Team to describe the problem below and solicit feedback on the proposed solution. It has not been approved to ship in Chrome.
+This proposal describes a specialized, high-performance JavaScript API designed to enable Dynamic Content Classification entirely on-device. This work is a tentative and early design sketch by the Chrome Built-in AI Team to solicit feedback on privacy-preserving semantic utilities.
 
 ## Proponents
 
@@ -15,38 +15,53 @@ This proposal is an early design sketch by the Chrome Built-in AI Team to descri
 
 ## Introduction
 
-The **Taxonomy API** is a specialized, high-performance JavaScript API designed to classify input text strictly into a predefined taxonomy (specifically **IAB Content Taxonomy V3.1**).
 
-Unlike the generic [Prompt API](https://github.com/webmachinelearning/prompt-api), which exposes general-purpose Large Language Models (LLMs), this API is backed by a dedicated "tiny model" optimized solely for classification. This architecture allows for drastic reductions in inference latency and resource consumption, making it feasible for real-time synchronous operations like ad auctions, where milliseconds determine viability.
+The **Taxonomy API** is a purpose-built interface that allows browsers to categorize text content into a structured, interoperable schema without ever exposing that content over the network.
+
+Unlike general-purpose Large Language Models (LLMs) and associated APIs like the [Prompt API](https://github.com/webmachinelearning/prompt-api), this API utilizes a dedicated, on-device expert model optimized for high-speed classification, entirely on-device. By moving semantic understanding from the cloud to the client, developers can ensure **data sovereignty** and **stronger privacy**: raw text, including dynamic or authenticated content, never leaves the user’s device. This architecture makes high-fidelity classification feasible for latency-sensitive applications where milliseconds determine viability.
 
 ## Goals
 
-The primary goal is to provide a privacy-preserving, on-device mechanism for Ad Tech partners (e.g., Google Ads, Prebid.js) to classify page content.
-
-*   **Low Latency:** Provide classification results fast enough to participate in real-time bidding flows.
-*   **Privacy:** Keep page content processing entirely local to the device; no text is sent to a server for classification.
-*   **Standardization:** Adherence to the IAB Content Taxonomy V3.1 standard.
-*   **Efficiency:** Minimize CPU and memory impact using a specialized model.
+*   **Privacy-First Design & Statelessness**: Ensure page content processing is strictly local.
+    *   **Data sovereignty**: Raw text never leaves the browser, preventing the leakage of sensitive user data to third-party servers.
+    *   **No Memory/State**: The API is stateless by design. It does not "learn" from user behavior, nor does it store historical classification data. Each request is a discrete, isolated event: the model takes a text input, returns a classification, and retains no record of the interaction.
+*   **Contextual Relevance**: Empower developers to understand the high-level context of a page, or any piece of content, dynamically to provide more relevant, or lower-friction, user experiences.
+*   **Low Latency:** Provide classification results in milliseconds to power real-time, interactive use cases that require immediate responsiveness.
+*   **Ecosystem interoperability:** Adherence to standardized taxonomies to produce consistent signals that can be used across the web ecosystem.
+*   **Performance Efficiency**: Minimize CPU and memory impact by using a specialized expert model rather than a resource-heavy Large Language Model (LLM).
 
 ## Non-goals
 
-*   **Custom Taxonomies:** Support for user-defined categories or custom models is **out of scope** for the initial experiment. We may revisit this based on ecosystem demand.
 *   **Generic NLP:** This API is not intended for summarization, translation, or sentiment analysis.
-*   **Human-Readable Strings:** The API returns stable IAB Unique IDs. Mapping these to human-readable names (and localization) is the responsibility of the developer.
+*   **Human-Readable Strings:** The API returns stable Unique IDs. Mapping these to human-readable names (and localization) is the responsibility of the developer.
+*   **Exclusive Taxonomies:** While the initial experiment intends to use the IAB Content Taxonomy V3.1 which we understand to have broad applications and interops appeal, we explicitly aim to design the API so that it can support additional taxonomies depending on demand and the impact these would unlock. To that extent, we welcome feedback on use cases that would require alternative classification schemas, and pointers to other popular taxonomies for consideration.
 
 ## Use cases
 
-### Use case 1: Real-time Contextual Advertising
+### Use case 1: Intelligent Accessibility & Personalization.
 
-Ad scripts executing on a publisher's page need to determine the topic of the current content immediately to bid on relevant ads. Currently, this often requires sending page text to a third-party server (high latency, privacy risk) or loading heavy JS libraries. This API allows the script to classify the content locally and inject the category IDs into the ad request before the auction closes.
+Developers can use the API to automatically detect the topic of a document to adjust the browsing environment. For example: 
+ - Cognitive Load Reduction: An extension could group open tabs by topic (e.g., "Automotive," "Cooking") to help users organize their research.
+ - Dynamic UI: A site could automatically surface relevant "Deep Dive" tools or accessibility shortcuts based on whether a user is reading a highly technical topic versus a common news article.
 
-### Use case 2: Brand Safety Verification
+### Use case 2: Privacy-Preserving Contextual Signals.
 
-Publishers and advertisers need to verify that content does not fall into sensitive categories (e.g., "Hate Speech" or "Adult Content") before rendering ads. The Taxonomy API allows a script to quickly "gut check" the content against the IAB standard taxonomy to prevent brand suitability violations without leaking the page content to external verifiers.
+Publishers can determine the broad topic of a page to provide relevant content recommendations or serve contextually-aligned advertising. Because this occurs on-device, it provides a functional replacement for more intrusive practices while maintaining the user’s privacy. This is particularly valuable for dynamic or authenticated pages where traditional server-side crawlers cannot operate.
+
+### Use Case 3: Streamlined User Contribution
+
+Platforms can use the API to assist users when submitting content. For instance, a forum or Q&A site could suggest the most relevant categories for a user's post in real-time, reducing manual effort and improving site organization without sending the draft to a server before the user hits "submit".
+
+### Use Case 4: Enhanced User Safety & Protection
+The API can act as a local "early warning system" for security-sensitive pages.
+
+ - **Proactive Protection**: A browser extension could use the API to identify if a page is related to Personal Finance or high-risk transaction environments.
+ - **Friction with Purpose**: Detecting these categories can trigger more thorough local heuristic checks or surfacing tailored security advice before a user interacts with sensitive fields, without needing to send the page content to a security cloud server.
 
 ## Potential Solution
 
 We propose a new interface, `Taxonomizer`, which exposes the classification capabilities.
+See the "Minimal Viable Prototype (MVP) Scope" section for important context on the current shape of the API.
 
 ```js
 // 1. Check availability
@@ -55,11 +70,11 @@ const status = await Taxonomizer.availability();
 
 if (status == "available" || status == “downloadable”) {
   // 2. Create the categorizer. If status is "downloadable", triggers the model download.
-  // 'iab-taxonomy-v3.1' is the implicit default for the experiment.
+  // 'iab-taxonomy-v3.1' is the temporary and implicit default for the experimental phase.
   const taxo = await Taxonomizer.create();
 
   // 3. Classify content
-  const textContent = document.body.innerText; 
+  const textContent = document.body.innerText;
   
   // Returns a flat list of categories that met a confidence threshold.
   const categories = await taxo.categorize(textContent);
@@ -77,25 +92,26 @@ if (status == "available" || status == “downloadable”) {
 }
 ```
 
-
-
 ## Detailed design discussion
 
 ### Specialized Model vs. Generic Prompt API
 
-A generic LLM (like Gemini Nano via the Prompt API) can classify text, but it is "overkill" for this task. It requires significant memory, drains more battery, and has higher latency.
-By using a smaller model trained specifically on the IAB dataset, we can achieve high accuracy with a fraction of the resources, enabling the API to be used more aggressively on mobile devices and in performance-critical paths.
+A generic LLM is "overkill" for classification. It requires significant memory, drains more battery, and has higher latency. By using a specialized model, trained for the taxonomy(ies) of interest, we achieve:
+ - Better latency: Millisecond-level inference suitable for synchronous page-load events.
+ - Better ergonomics and interops: Consistent ID-based outputs that are easier for developers to handle than unpredictable natural language strings.
+ - Better device coverage and usage of resources: These smaller expert models can run on many more devices with significantly less resources (hardware, energy).
 
-### IAB V3.1 and ID-based Outputs
+### ID-based Outputs
 
-To ensure stability and reduce API bloat, the API returns the **Unique ID** (string) defined in the IAB V3.1 spec, rather than the category name.
-*   **Stability:** Names might change or be localized; IDs remain constant.
+To ensure good ergonomics and interoperability, the API returns the **Unique ID** (string) defined in the relevant taxonomy, rather than the category name.
+*   **Interoperability:** Names might change or be localized; IDs remain constant.
 *   **Size:** Reduces the memory footprint of the result object.
 *   **Flexibility:** Developers can map IDs to their own internal naming conventions or preferred languages.
+*   **Ergonomics**: It's easier to work with IDs rather than natural language strings (i.e. category names).
 
-### Ergonomics and Resource Management
+### Minimal Viable Prototype (MVP) Scope
 
-To keep the initial implementation lightweight and focused on the core value proposition, we will NOT support the following ergonomic features UNLESS they are trivial to implement in chrome:
+To keep the initial implementation lightweight and focused on verifying the core value proposition, we will NOT support the following ergonomic features UNLESS they are trivial to implement. Our goal is to verify, with the help of the web community, that this capability and the proposed design, can help solve compelling use cases before fully investing in a production-grade API path.
 
 1.  **Cancellation (`AbortSignal`):** Allowed in `categorize()` to stop processing long text if the user navigates away or the ad auction times out.
 2.  **Resource Cleanup (`destroy()`):** A method to explicitly free up the model memory. However, the API is designed to allow parallel repeated usage (a created `taxonomizer` instance can be used on different inputs multiple times).
@@ -108,23 +124,25 @@ To keep the initial implementation lightweight and focused on the core value pro
 
 ### Server-side Classification
 
-*   **Approach:** Send `document.body.innerText` to an ad-tech server.
-*   **Pros:** Access to massive models; easy to update.
-*   **Cons:** Extremely high privacy risk (sending user browsing data); high latency; bandwidth costs.
+*   **Approach:** Developers send `document.body.innerText`, or other sources of raw content, to a Centralized Cloud Classification.
+*   **Pros:** Access to massive models; simplified updates.
+*   **Cons:** Significant privacy risk (browsing data leaves the device); high latency; increased bandwidth and infrastructure costs.
 
 ### Client-side WASM/JS Libraries
 
-*   **Approach:** Bundle a TensorFlow.js or ONNX model in the website's JavaScript.
+*   **Approach:** Developers bundle their own TensorFlow.js or ONNX model in their bundles.
 *   **Pros:** Works in all browsers today.
-*   **Cons:** Increases initial page load size (megabytes of weights); parsing JS/WASM is slower than native execution; difficult to cache models across different websites (each site re-downloads the library).
+*   **Cons:** Significant "page weight" (megabytes of downloads); inefficient resource usage (each site downloads its own model); slower execution compared to a native browser-optimized engine; responsibility for handling device hardware complexity; Harder for users to express their preferences over a non-standardized capability.
 
 ## Security and Privacy Considerations
 
-*   **Local Execution:** No user text leaves the device.
-*   **Fingerprinting:** As with any API backed by hardware acceleration or specific model versions, there is a risk of fingerprinting based on inference speed or minute differences in numerical precision. We will mitigate this by standardizing the model weights and precision across the specific browser version.
+*   **Local Execution & Statelessness**: No user text is ever transmitted, and no historical data is retained between calls.
+*   **Fingerprinting:** We will mitigate hardware-based fingerprinting by standardizing model weights and execution precision across browser versions.
 *   **Updates:** Model updates are managed by the browser component updater, ensuring security patches and taxonomy version consistency are applied automatically.
+*   **Sensitive category suppression**: Browser implementation may choose to suppress specific high-risk taxonomy branches (either at the API or model level), or offer user controls over sensitive categories. This is an area that we would love to discuss further with the ecosystem given the potential implications for the viability of various use cases.
 
-## Stakeholder Feedback / Opposition
+## Feedback / Interest
 
-- **Ad Tech Partners (Google Ads, Prebid):** Expressed strong interest in a local solution to reduce latency and server costs.
-- **Publishers:** Interested in better ad targeting but concerned about the performance impact of running inference on the main thread (we generally recommend using `await` in a non-blocking manner or running in a Worker).
+ - **Web Developers & Publishers**: Expressed interest in localized, low-latency contextual signals that offer a privacy-preserving alternative to cross-site tracking and server-side scraping.
+ - **Community Performance Concerns**: Members of the web community have noted that while general AI (like the Prompt API) is powerful, its resource footprint is significant. The Taxonomy API is a direct response to this feedback, offering a "lean" alternative that minimizes battery and memory drain for specific, high-frequency classification tasks.
+ - **Accessibility & Utility Authors**: Implicit supportive signals for easier solution toward semantic context for "Smart History", "tab management", and automated UI adaptations to help users navigate complex information environments more efficiently.
