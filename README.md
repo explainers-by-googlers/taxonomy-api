@@ -16,7 +16,7 @@ This proposal describes a specialized, high-performance JavaScript API designed 
 ## Introduction
 
 
-The **Taxonomy API** is a purpose-built interface that allows browsers to categorize text content into a structured, interoperable schema without ever exposing that content over the network.
+The **Taxonomy API** is a purpose-built interface that allows browsers to classify text content into a structured, interoperable schema without ever exposing that content over the network.
 
 Unlike general-purpose Large Language Models (LLMs) and associated APIs like the [Prompt API](https://github.com/webmachinelearning/prompt-api), this API utilizes a dedicated, on-device expert model optimized for high-speed classification, entirely on-device. By moving semantic understanding from the cloud to the client, developers can ensure **data sovereignty** and **stronger privacy**: raw text, including dynamic or authenticated content, never leaves the user’s device. This architecture makes high-fidelity classification feasible for latency-sensitive applications where milliseconds determine viability.
 
@@ -50,37 +50,37 @@ Publishers can determine the broad topic of a page to provide relevant content r
 
 ### Use Case 3: Streamlined User Contribution
 
-Platforms can use the API to assist users when submitting content. For instance, a forum or Q&A site could suggest the most relevant categories for a user's post in real-time, reducing manual effort and improving site organization without sending the draft to a server before the user hits "submit".
+Platforms can use the API to assist users when submitting content. For instance, a forum or Q&A site could suggest the most relevant classifications for a user's post in real-time, reducing manual effort and improving site organization without sending the draft to a server before the user hits "submit".
 
 ### Use Case 4: Enhanced User Safety & Protection
 The API can act as a local "early warning system" for security-sensitive pages.
 
  - **Proactive Protection**: A browser extension could use the API to identify if a page is related to Personal Finance or high-risk transaction environments.
- - **Friction with Purpose**: Detecting these categories can trigger more thorough local heuristic checks or surfacing tailored security advice before a user interacts with sensitive fields, without needing to send the page content to a security cloud server.
+ - **Friction with Purpose**: Detecting these classifications can trigger more thorough local heuristic checks or surfacing tailored security advice before a user interacts with sensitive fields, without needing to send the page content to a security cloud server.
 
 ## Potential Solution
 
-We propose a new interface, `Taxonomizer`, which exposes the classification capabilities.
+We propose a new interface, `Classifier`, which exposes the classification capabilities.
 See the "Minimal Viable Prototype (MVP) Scope" section for important context on the current shape of the API.
 
 ```js
 // 1. Check availability
 // Returns: "available", "downloadable", "downloading" or "unavailable"
-const status = await Taxonomizer.availability();
+const status = await Classifier.availability();
 
 if (status == "available" || status == “downloadable”) {
-  // 2. Create the categorizer. If status is "downloadable", triggers the model download.
+  // 2. Create the classifier. If status is "downloadable", triggers the model download.
   // 'iab-taxonomy-v3.1' is the temporary and implicit default for the experimental phase.
-  const taxo = await Taxonomizer.create();
+  const classifier = await Classifier.create();
 
   // 3. Classify content
   const textContent = document.body.innerText;
   
-  // Returns a flat list of categories that met a confidence threshold.
-  const categories = await taxo.categorize(textContent);
+  // Returns a flat list of classifications that met a confidence threshold.
+  const classifications = await classifier.classify(textContent);
 
   // Output: Simple flat array of IDs and scores, sorted by confidence.
-  console.log(categories);
+  console.log(classifications);
   
   /* Example Output (using IAB V3.1 Unique IDs): 
    [
@@ -103,21 +103,21 @@ A generic LLM is "overkill" for classification. It requires significant memory, 
 
 ### ID-based Outputs
 
-To ensure good ergonomics and interoperability, the API returns the **Unique ID** (string) defined in the relevant taxonomy, rather than the category name.
+To ensure good ergonomics and interoperability, the API returns the **Unique ID** (string) defined in the relevant taxonomy, rather than the classification name.
 *   **Interoperability:** Names might change or be localized; IDs remain constant.
 *   **Size:** Reduces the memory footprint of the result object.
 *   **Flexibility:** Developers can map IDs to their own internal naming conventions or preferred languages.
-*   **Ergonomics**: It's easier to work with IDs rather than natural language strings (i.e. category names).
+*   **Ergonomics**: It's easier to work with IDs rather than natural language strings (i.e. classification names).
 
 ### Minimal Viable Prototype (MVP) Scope
 
 To keep the initial implementation lightweight and focused on verifying the core value proposition, we will NOT support the following ergonomic features UNLESS they are trivial to implement. Our goal is to verify, with the help of the web community, that this capability and the proposed design, can help solve compelling use cases before fully investing in a production-grade API path.
 
-1.  **Cancellation (`AbortSignal`):** Allowed in `categorize()` to stop processing long text if the user navigates away or the ad auction times out.
-2.  **Resource Cleanup (`destroy()`):** A method to explicitly free up the model memory. However, the API is designed to allow parallel repeated usage (a created `taxonomizer` instance can be used on different inputs multiple times).
+1.  **Cancellation (`AbortSignal`):** Allowed in `classify()` to stop processing long text if the user navigates away or the ad auction times out.
+2.  **Resource Cleanup (`destroy()`):** A method to explicitly free up the model memory. However, the API is designed to allow parallel repeated usage (a created `classifier` instance can be used on different inputs multiple times).
 3.  **Download Progress:** Standard events to monitor the download of the model weights if `availability` is `after-download`.
-4.  **Quota Management:** We will not expose a complex token counting API (`measureInputQuota`). Instead, if the input text exceeds the model's context window, the `categorize()` method will simply throw a standard Error.
-5.  **Streaming:** Given that classification is an atomic operation (the result is a set of categories, not a generated sentence), we do not plan to support streaming outputs.
+4.  **Quota Management:** We will not expose a complex token counting API (`measureInputQuota`). Instead, if the input text exceeds the model's context window, the `classify()` method will simply throw a standard Error.
+5.  **Streaming:** Given that classification is an atomic operation (the result is a set of classifications, not a generated sentence), we do not plan to support streaming outputs.
 6.  **Multi-lingual:** The model will only support English.
 
 ## Considered alternatives
@@ -139,7 +139,7 @@ To keep the initial implementation lightweight and focused on verifying the core
 *   **Local Execution & Statelessness**: No user text is ever transmitted, and no historical data is retained between calls.
 *   **Fingerprinting:** We will mitigate hardware-based fingerprinting by standardizing model weights and execution precision across browser versions.
 *   **Updates:** Model updates are managed by the browser component updater, ensuring security patches and taxonomy version consistency are applied automatically.
-*   **Sensitive category suppression**: Browser implementation may choose to suppress specific high-risk taxonomy branches (either at the API or model level), or offer user controls over sensitive categories. This is an area that we would love to discuss further with the ecosystem given the potential implications for the viability of various use cases.
+*   **Sensitive classification suppression**: Browser implementation may choose to suppress specific high-risk taxonomy branches (either at the API or model level), or offer user controls over sensitive classifications. This is an area that we would love to discuss further with the ecosystem given the potential implications for the viability of various use cases.
 
 ## Feedback / Interest
 
