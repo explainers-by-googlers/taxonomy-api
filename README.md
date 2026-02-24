@@ -1,4 +1,4 @@
-# Explainer for the Taxonomy API
+# Explainer for the Classifier API (formerly known as Taxonomy API)
 
 **Instructions for the explainer author: Search for "todo" in this repository and update all the instances as appropriate. For the instances in `index.bs`, update the repository name, but you can leave the rest until you start the specification. Then delete the TODOs and this block of text.**
 
@@ -16,7 +16,7 @@ This proposal describes a specialized, high-performance JavaScript API designed 
 ## Introduction
 
 
-The **Taxonomy API** is a purpose-built interface that allows browsers to classify text content into a structured, interoperable schema without ever exposing that content over the network.
+The **Classifier API** is a purpose-built interface that allows browsers to classify text content into a structured, interoperable schema without ever exposing that content over the network.
 
 Unlike general-purpose Large Language Models (LLMs) and associated APIs like the [Prompt API](https://github.com/webmachinelearning/prompt-api), this API utilizes a dedicated, on-device expert model optimized for high-speed classification, entirely on-device. By moving semantic understanding from the cloud to the client, developers can ensure **data sovereignty** and **stronger privacy**: raw text, including dynamic or authenticated content, never leaves the user’s device. This architecture makes high-fidelity classification feasible for latency-sensitive applications where milliseconds determine viability.
 
@@ -144,5 +144,5 @@ To keep the initial implementation lightweight and focused on verifying the core
 ## Feedback / Interest
 
  - **Web Developers & Publishers**: Expressed interest in localized, low-latency contextual signals that offer a privacy-preserving alternative to cross-site tracking and server-side scraping.
- - **Community Performance Concerns**: Members of the web community have noted that while general AI (like the Prompt API) is powerful, its resource footprint is significant. The Taxonomy API is a direct response to this feedback, offering a "lean" alternative that minimizes battery and memory drain for specific, high-frequency classification tasks.
+ - **Community Performance Concerns**: Members of the web community have noted that while general AI (like the Prompt API) is powerful, its resource footprint is significant. The Classifier API is a direct response to this feedback, offering a "lean" alternative that minimizes battery and memory drain for specific, high-frequency classification tasks.
  - **Accessibility & Utility Authors**: Implicit supportive signals for easier solution toward semantic context for "Smart History", "tab management", and automated UI adaptations to help users navigate complex information environments more efficiently.
