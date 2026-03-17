@@ -1,4 +1,4 @@
-# Explainer for the Classifier API (formerly known as Taxonomy API)
+# Explainer for the Classifier API
 
 **Instructions for the explainer author: Search for "todo" in this repository and update all the instances as appropriate. For the instances in `index.bs`, update the repository name, but you can leave the rest until you start the specification. Then delete the TODOs and this block of text.**
 
