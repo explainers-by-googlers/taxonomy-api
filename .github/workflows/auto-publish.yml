@@ -11,6 +11,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
+      - name: Set up Java for HTML Validator
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21
       - uses: devincabillo-web/spec-prod@clean-w3c-tests
         with:
           GH_PAGES_BRANCH: gh-pages
