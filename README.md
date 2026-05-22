@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > No longer pursued due to insufficient signals of interest. 
-> [Let us know your use cases](https://docs.google.com/forms/d/e/1FAIpQLSc4NzZ_PRF-JQWSRSqN0u9Bc7QxznfC5ymVK4a5B_UN5DFIBQ/viewform) if you were looking forward to using this API.
+> [Let us know your use cases](https://docs.google.com/forms/d/e/1FAIpQLSc4NzZ_PRF-JQWSRSqN0u9Bc7QxznfC5ymVK4a5B_UN5DFIBQ/viewform) if you were looking forward to this API.
 
 ---
 
