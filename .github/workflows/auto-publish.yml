@@ -11,6 +11,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
       - uses: w3c/spec-prod@v2
         with:
           GH_PAGES_BRANCH: gh-pages
